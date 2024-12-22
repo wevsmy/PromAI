@@ -1,0 +1,142 @@
+prometheus_url: "http://prometheus-kube-prometheus-prometheus.monitoring.svc.cluster.local:9090"
+
+metric_types:
+  - type: "基础资源使用情况"
+    metrics:
+      - name: "CPU使用率"
+        description: "节点CPU使用率统计"
+        query: "100 - (avg by(instance) (irate(node_cpu_seconds_total{mode='idle'}[5m])) * 100)"
+        trend_query: "100 - (avg by(instance) (irate(node_cpu_seconds_total{mode='idle'}[5m])) * 100)[6h:5m]"
+        threshold: 80
+
+        unit: "%"
+        labels:
+          instance: "节点"
+      
+      - name: "内存使用率"
+        description: "节点内存使用率统计"
+        query: "100 - ((node_memory_MemAvailable_bytes * 100) / node_memory_MemTotal_bytes)"
+        trend_query: "100 - ((node_memory_MemAvailable_bytes * 100) / node_memory_MemTotal_bytes)[6h:5m]"
+        threshold: 85
+        unit: "%"
+        labels:
+          instance: "节点"
+
+      - name: "磁盘使用率"
+        description: "节点磁盘使用率统计"
+        query: >-
+          (((100 -((node_filesystem_avail_bytes * 100) / node_filesystem_size_bytes)) 
+          and ON (instance, device, mountpoint) node_filesystem_readonly{mountpoint!~"/run.*|/var.*|/boot.*|/tmp.*"}== 0) 
+          + on(instance) group_left(node_uname_info) node_uname_info) 
+          * on(instance) group_left(nodename) node_uname_info
+        threshold: 80
+        unit: "%"
+        labels:
+          device: "设备"
+          instance: "IP"
+          mountpoint: "挂载点"
+          nodename: "节点名称"
+
+  - type: "PaaS平台巡检"
+    metrics:
+      - name: "K8s集群关键服务"
+        description: "K8s集群关键服务状态统计"
+        query: "key_pod_status"
+        threshold: 1 
+        threshold_type: "equal"
+        unit: ""
+        labels:
+          component: "服务名称"
+          describe: "服务描述"
+
+  - type: "kubernetes集群监控状态"
+    metrics:
+      - name: "K8s集群巡检"
+        description: "K8s集群巡检"
+        query: "k8s_cluster_auto_check"
+        threshold: 1
+        threshold_type: "equal" 
+        unit: ""
+        labels:
+          component: "服务名称"
+          hostname: "主机名称"
+          owner: "负责人"
+
+      - name: "自定义监控脚本执行情况"
+        description: "script-exporter监控脚本执行情况"
+        query: "script_success"
+        threshold: 1
+        threshold_type: "equal"
+        unit: ""
+        labels:
+          instance: "宿主机器"
+          script: "脚本名称"
+ 
+      - name: "Pod运行状态"
+        description: "集群Pod运行状态统计"
+        query: "sum by (namespace, pod) (kube_pod_status_phase{phase='Running',namespace='kube-system'})"
+        threshold: 1
+        threshold_type: "equal"
+        unit: ""
+        labels:
+          namespace: "命名空间"
+          pod: "Pod名称"
+
+      - name: "节点就绪状态"
+        description: "K8s节点就绪状态检查"
+        query: "kube_node_status_condition{condition='Ready',status!='true'}"
+        threshold: 0
+        threshold_type: "equal"
+        unit: ""
+        labels:
+          node: "节点"
+          condition: "状态类型"
+
+      - name: "PVC使用率"
+        description: "持久化存储使用率"
+        query: >-
+          100 * (1 - kubelet_volume_stats_available_bytes / kubelet_volume_stats_capacity_bytes)
+        threshold: 80
+        unit: "%"
+        labels:
+          namespace: "命名空间"
+          persistentvolumeclaim: "PVC名称"
+
+  # - type: "application"
+  #   metrics:
+  #     - name: "服务可用性"
+  #       description: "关键服务健康检查"
+  #       query: "up{job=~'.*service.*'}"
+  #       threshold: 1
+  #       unit: ""
+  #       labels:
+  #         job: "服务名称"
+  #         instance: "实例"
+
+  #     - name: "HTTP请求错误率"
+  #       description: "服务HTTP 5xx错误率"
+  #       query: >-
+  #         sum(rate(http_requests_total{status=~"5.."}[5m])) by (service) 
+  #         / sum(rate(http_requests_total[5m])) by (service) * 100
+  #       threshold: 5
+  #       unit: "%"
+  #       labels:
+  #         service: "服务"
+
+  #     - name: "服务响应延迟"
+  #       description: "服务P95响应时间"
+  #       query: "histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket[5m])) by (le, service))"
+  #       threshold: 1
+  #       unit: "s"
+  #       labels:
+  #         service: "服务"
+
+  # - type: "network"
+  #   metrics:
+  #     - name: "TCP连接状态"
+  #       description: "TCP连接状态统计"
+  #       query: "node_netstat_Tcp_CurrEstab"
+  #       threshold: 10000
+  #       unit: ""
+  #       labels:
+  #         instance: "节点"
