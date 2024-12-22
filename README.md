@@ -71,8 +71,8 @@ equal: 表示值必须等于阈值才被视为 "normal" 状态。
 
 1. 克隆仓库：
    ```bash
-   git clone https://github.com/yourusername/prometheus-report-generator.git
-   cd prometheus-report-generator
+   git clone https://github.com/kubehan/PromAI.git
+   cd PromAI
    ```
 
 2. 安装依赖：
@@ -101,8 +101,8 @@ equal: 表示值必须等于阈值才被视为 "normal" 状态。
 2. 修改配置文件中的指标
 3. 运行程序 默认运行在8091端口，通过访问http://localhost:8091/getreport 查看报告
 ```bash
-go build -o prometheus-report-generator main.go
-./prometheus-report-generator -config config/config.yaml
+go build -o PromAI main.go
+./PromAI -config config/config.yaml
 ```
 
 
