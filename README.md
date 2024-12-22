@@ -97,6 +97,14 @@ equal: 表示值必须等于阈值才被视为 "normal" 状态。
 
 ## 使用示例
 在配置文件中添加所需的监控指标后，运行程序将生成 HTML 报告。报告中将包含各个指标的当前状态、历史趋势图表以及详细的表格数据。
+1. 修改配置文件中的Prometheus地址为自己的地址
+2. 修改配置文件中的指标
+3. 运行程序 默认运行在8091端口，通过访问http://localhost:8091/getreport 查看报告
+```bash
+go build -o prometheus-report-generator main.go
+./prometheus-report-generator -config config/config.yaml
+```
+
 
 # Prometheus Automated Inspection 未来新功能规划列表
 1. 多数据源支持
