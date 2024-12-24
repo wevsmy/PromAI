@@ -127,5 +127,12 @@ go build -o PromAI main.go
 ## 贡献
 欢迎任何形式的贡献！请提交问题、建议或拉取请求。
 
+## 贡献者
+
+<a href="https://github.com/eryajf/learn-github/graphs/contributors">
+  <img src="https://contrib.rocks/image?repo=eryajf/learn-github" />
+</a>
+
+
 ## 许可证
 该项目采用 MIT 许可证，详细信息请查看 LICENSE 文件。
