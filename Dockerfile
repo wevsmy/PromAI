@@ -11,7 +11,7 @@ LABEL version="1.0" \
       maintainer="Kubehan"
 WORKDIR /app
 COPY --from=builder /build/PromAI /app/
-ENV PROMETHEUS_URL="http://prometheus-kube-prometheus-prometheus.monitoring.svc.cluster.local:9090"
+COPY config outputs reports templates /app/
 EXPOSE 8080
 # 运行应用程序
 CMD ["./PromAI", "-port", "8080"]
