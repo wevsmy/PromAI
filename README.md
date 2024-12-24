@@ -121,7 +121,7 @@ go build -o PromAI main.go
 12. 社区和插件支持
 13. 性能优化
 14. 用户反馈和建议收集
-15. xoxo
+15. xxx
 
 
 ## 贡献
