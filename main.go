@@ -49,7 +49,13 @@ func loadConfig(path string) (*Config, error) {
 	if err := yaml.Unmarshal(data, &config); err != nil {
 		return nil, fmt.Errorf("parsing config file: %w", err)
 	} // 解析配置文件
-
+	// 从环境变量中获取 PrometheusURL
+	if envPrometheusURL := os.Getenv("PROMETHEUS_URL"); envPrometheusURL != "" {
+		log.Printf("使用环境变量中的 Prometheus URL: %s", envPrometheusURL)
+		config.PrometheusURL = envPrometheusURL
+	} else {
+		log.Printf("使用配置文件中的 Prometheus URL: %s", config.PrometheusURL)
+	}
 	return &config, nil // 返回配置结构体
 }
 
@@ -273,6 +279,9 @@ func main() {
 
 	// 启动 HTTP 服务器
 	log.Printf("Starting server on port: %s with config: %s", *port, *configPath)
+	log.Printf("Prometheus URL: %s", config.PrometheusURL)
+	// 打印获取报告的地址
+	log.Printf("获取报告地址: http://localhost:%s/getreport", *port)
 	if err := http.ListenAndServe(":"+*port, nil); err != nil {
 		log.Fatalf("Error starting HTTP server: %v", err)
 	}
