@@ -129,8 +129,8 @@ go build -o PromAI main.go
 
 ## 贡献者
 
-<a href="https://github.com/eryajf/learn-github/graphs/contributors">
-  <img src="https://contrib.rocks/image?repo=eryajf/learn-github" />
+<a href="https://github.com/kubehan/PromAI/graphs/contributors">
+  <img src="https://contrib.rocks/image?repo=kubehan/PromAI" />
 </a>
 
 
