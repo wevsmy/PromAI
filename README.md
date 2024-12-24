@@ -96,7 +96,7 @@ equal: 表示值必须等于阈值才被视为 "normal" 状态。
    生成的报告将保存在 `reports` 目录下。
 ### Docker 部署
 ```bash
-docker run -d --name PromAI -p 8091:8091 kubehan/PromAI:latest
+docker run -d --name PromAI -p 8091:8091 kubehan/promai:latest
 ```
 
 ### Kubernetes 部署
@@ -110,6 +110,7 @@ kubectl apply -f deploy/deployment.yaml
 1. 修改配置文件中的Prometheus地址为自己的地址
 2. 修改配置文件中的指标
 3. 运行程序 默认运行在8091端口，通过访问http://localhost:8091/getreport 查看报告
+
 ```bash
 go build -o PromAI main.go
 ./PromAI -config config/config.yaml
