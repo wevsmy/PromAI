@@ -68,7 +68,7 @@ equal: 表示值必须等于阈值才被视为 "normal" 状态。
 ```
 
 ## 快速开始
-
+### 源码编译
 1. 克隆仓库：
    ```bash
    git clone https://github.com/kubehan/PromAI.git
@@ -82,18 +82,28 @@ equal: 表示值必须等于阈值才被视为 "normal" 状态。
 
 3. 修改配置文件：
    ```bash
-   cp config/config.example.yaml config/config.yaml
+   cp config/config.yaml config/config.yaml
    # 编辑 config.yaml 设置 Prometheus 服务器地址和监控指标
    ```
 
 4. 构建并运行：
    ```bash
-   go build
-   ./prometheus-report-generator -config config/config.yaml
+   go build -o PromAI main.go
+   ./PromAI -config config/config.yaml
    ```
 
 5. 查看报告：
    生成的报告将保存在 `reports` 目录下。
+### Docker 部署
+```bash
+docker run -d --name PromAI -p 8091:8091 kubehan/PromAI:latest
+```
+
+### Kubernetes 部署
+
+```bash
+kubectl apply -f deploy/deployment.yaml
+```
 
 ## 使用示例
 在配置文件中添加所需的监控指标后，运行程序将生成 HTML 报告。报告中将包含各个指标的当前状态、历史趋势图表以及详细的表格数据。
