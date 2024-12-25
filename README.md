@@ -147,7 +147,7 @@ go build -o PromAI main.go
         <a href="https://github.com/kubehan">
             <img src="https://avatars.githubusercontent.com/u/69997301?v=4" width="100;" alt="kubehan"/>
             <br />
-            <sub><b>kubehan</b></sub>
+            <sub><b>Kubehan</b></sub>
         </a>
     </td>
     <td align="center">
