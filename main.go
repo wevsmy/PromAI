@@ -241,6 +241,7 @@ func setup(configPath string) (v1.API, *Config, error) {
 	return client, config, nil
 }
 
+// 程序入口
 func main() {
 	configPath := flag.String("config", "config/config.yaml", "Path to configuration file") // 定义配置文件路径
 	port := flag.String("port", "8091", "Port to run the HTTP server on")                   // 定义端口号
