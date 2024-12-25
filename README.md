@@ -168,10 +168,5 @@ go build -o PromAI main.go
 <!-- readme: collaborators,contributors -end -->
 
 
-<a href="https://github.com/kubehan/PromAI/graphs/contributors">
-  <img src="https://contrib.rocks/image?repo=kubehan/PromAI" />
-</a>
-
-
 ## 许可证
 该项目采用 MIT 许可证，详细信息请查看 LICENSE 文件。
