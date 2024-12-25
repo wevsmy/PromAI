@@ -141,6 +141,30 @@ go build -o PromAI main.go
 ## 贡献者
 
 <!-- readme: collaborators,contributors -start -->
+<table>
+<tr>
+    <td align="center">
+        <a href="https://github.com/kubehan">
+            <img src="https://avatars.githubusercontent.com/u/69997301?v=4" width="100;" alt="kubehan"/>
+            <br />
+            <sub><b>kubehan</b></sub>
+        </a>
+    </td>
+    <td align="center">
+        <a href="https://github.com/wevsmy">
+            <img src="https://avatars.githubusercontent.com/u/26675374?v=4" width="100;" alt="wevsmy"/>
+            <br />
+            <sub><b>Wilson_wu</b></sub>
+        </a>
+    </td>
+    <td align="center">
+        <a href="https://github.com/liaofan-0710">
+            <img src="https://avatars.githubusercontent.com/u/59794905?v=4" width="100;" alt="liaofan-0710"/>
+            <br />
+            <sub><b>了凡</b></sub>
+        </a>
+    </td></tr>
+</table>
 <!-- readme: collaborators,contributors -end -->
 
 
