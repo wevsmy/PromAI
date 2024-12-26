@@ -1,4 +1,4 @@
-prometheus_url: "http://prometheus-kube-prometheus-prometheus.monitoring.svc.cluster.local:9090"
+prometheus_url: "http://prometheus.monitoring.svc.cluster.local:9090"
 
 metric_types:
   - type: "基础资源使用情况"
@@ -6,21 +6,16 @@ metric_types:
       - name: "CPU使用率"
         description: "节点CPU使用率统计"
         query: "100 - (avg by(instance) (irate(node_cpu_seconds_total{mode='idle'}[5m])) * 100)"
-        trend_query: "100 - (avg by(instance) (irate(node_cpu_seconds_total{mode='idle'}[5m])) * 100)[6h:5m]"
         threshold: 80
-
+        threshold_type: "greater"
         unit: "%"
-        labels:
-          instance: "节点"
       
       - name: "内存使用率"
         description: "节点内存使用率统计"
         query: "100 - ((node_memory_MemAvailable_bytes * 100) / node_memory_MemTotal_bytes)"
-        trend_query: "100 - ((node_memory_MemAvailable_bytes * 100) / node_memory_MemTotal_bytes)[6h:5m]"
         threshold: 85
+        threshold_type: "greater"
         unit: "%"
-        labels:
-          instance: "节点"
 
       - name: "磁盘使用率"
         description: "节点磁盘使用率统计"
@@ -30,13 +25,15 @@ metric_types:
           + on(instance) group_left(node_uname_info) node_uname_info) 
           * on(instance) group_left(nodename) node_uname_info
         threshold: 80
+        threshold_type: "greater"
         unit: "%"
-        labels:
-          device: "设备"
-          instance: "IP"
-          mountpoint: "挂载点"
-          nodename: "节点名称"
-
+      - name: "固定机器内存使用率"
+        description: "固定机器内存使用率统计"
+        query: >-
+          100 - ((node_memory_MemAvailable_bytes{instance="172.16.5.132:9100"} * 100) / node_memory_MemTotal_bytes{instance="172.16.5.132:9100"})
+        threshold: 16.84
+        threshold_type: "greater"
+        unit: "%"
   - type: "PaaS平台巡检"
     metrics:
       - name: "K8s集群关键服务"
@@ -97,6 +94,7 @@ metric_types:
         query: >-
           100 * (1 - kubelet_volume_stats_available_bytes / kubelet_volume_stats_capacity_bytes)
         threshold: 80
+        threshold_type: "greater"
         unit: "%"
         labels:
           namespace: "命名空间"
