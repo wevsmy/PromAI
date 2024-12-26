@@ -15,28 +15,15 @@ import (
 	"github.com/prometheus/common/model"
 	"gopkg.in/yaml.v2"
 
+	"PromAI/pkg/config"
 	"PromAI/pkg/report"
+	"PromAI/pkg/status"
 )
 
-type Config struct {
-	PrometheusURL string       `yaml:"prometheus_url"`
-	MetricTypes   []MetricType `yaml:"metric_types"`
-}
-
-type MetricType struct {
-	Type    string         `yaml:"type"`    // 指标类型
-	Metrics []MetricConfig `yaml:"metrics"` // 指标配置
-}
-
-type MetricConfig struct {
-	Name          string            `yaml:"name"`           // 指标名称
-	Description   string            `yaml:"description"`    // 指标描述
-	Query         string            `yaml:"query"`          // 查询语句
-	Threshold     float64           `yaml:"threshold"`      // 阈值
-	Unit          string            `yaml:"unit"`           // 单位
-	Labels        map[string]string `yaml:"labels"`         // key是原始label名，value是显示的别名
-	ThresholdType string            `yaml:"threshold_type"` // 阈值比较方式: "greater", "less", "equal", "greater_equal", "less_equal"
-}
+// 使用 config 包中定义的类型
+type Config = config.Config
+type MetricType = config.MetricType
+type MetricConfig = config.MetricConfig
 
 // 加载配置文件
 func loadConfig(path string) (*Config, error) {
@@ -277,6 +264,41 @@ func main() {
 	})
 	// 提供静态文件服务以便访问生成的报告
 	http.Handle("/reports/", http.StripPrefix("/reports/", http.FileServer(http.Dir("reports"))))
+
+	// 添加服务状态看板路由
+	http.HandleFunc("/status", func(w http.ResponseWriter, r *http.Request) {
+		data, err := status.CollectMetricStatus(client, config)
+		if err != nil {
+			http.Error(w, "Failed to collect status data", http.StatusInternalServerError)
+			log.Printf("Error collecting status data: %v", err)
+			return
+		}
+
+		// 创建模板函数映射
+		funcMap := template.FuncMap{
+			"now": time.Now,
+			"date": func(format string, t time.Time) string {
+				return t.Format(format)
+			},
+		}
+
+		// 创建一个新的模板，并在解析之前注册函数
+		tmpl := template.New("status.html").Funcs(funcMap)
+
+		// 解析模板
+		tmpl, err = tmpl.ParseFiles("templates/status.html")
+		if err != nil {
+			http.Error(w, "Failed to parse template", http.StatusInternalServerError)
+			log.Printf("Error parsing template: %v", err)
+			return
+		}
+
+		if err := tmpl.Execute(w, data); err != nil {
+			http.Error(w, "Failed to render template", http.StatusInternalServerError)
+			log.Printf("Error rendering template: %v", err)
+			return
+		}
+	})
 
 	// 启动 HTTP 服务器
 	log.Printf("Starting server on port: %s with config: %s", *port, *configPath)
