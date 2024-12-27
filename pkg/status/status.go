@@ -2,11 +2,11 @@ package status
 
 import (
 	"context"
-	"fmt"
 	"log"
 	"time"
 
 	"PromAI/pkg/config"
+	"PromAI/pkg/metrics"
 
 	v1 "github.com/prometheus/client_golang/api/prometheus/v1"
 	"github.com/prometheus/common/model"
@@ -73,7 +73,7 @@ func GenerateStatusData(days int) (*StatusData, error) {
 	return data, nil
 }
 
-func CollectMetricStatus(client v1.API, config *config.Config) (*StatusData, error) {
+func CollectMetricStatus(client metrics.PrometheusAPI, config *config.Config) (*StatusData, error) {
 	data, err := GenerateStatusData(7) // 显示最近7天的数据
 	if err != nil {
 		log.Printf("生成状态数据失败: %v", err)
@@ -138,7 +138,7 @@ func CollectMetricStatus(client v1.API, config *config.Config) (*StatusData, err
 	return data, nil
 }
 
-func queryMetricStatus(client v1.API, metric config.MetricConfig, date string) (bool, error) {
+func queryMetricStatus(client metrics.PrometheusAPI, metric config.MetricConfig, date string) (bool, error) {
 	ctx := context.Background()
 
 	dateTime, err := time.Parse("01-02", date)
@@ -149,9 +149,6 @@ func queryMetricStatus(client v1.API, metric config.MetricConfig, date string) (
 	// 设置查询时间范围为那一天的0点到23:59:59
 	startTime := time.Date(time.Now().Year(), dateTime.Month(), dateTime.Day(), 0, 0, 0, 0, time.Local)
 	endTime := startTime.Add(24 * time.Hour).Add(-time.Second)
-
-	// 修改查询语句，使用时间范围
-	rangeQuery := fmt.Sprintf("max_over_time(%s[24h])", metric.Query)
 
 	log.Printf(`
 查询指标: [%s]
@@ -165,12 +162,12 @@ PromQL: %s
 		metric.Name,
 		startTime.Format("2006-01-02 15:04:05"),
 		endTime.Format("2006-01-02 15:04:05"),
-		rangeQuery,
-		rangeQuery,
+		metric.Query,
+		metric.Query,
 		startTime.Format("2006-01-02 15:04:05"),
 		endTime.Format("2006-01-02 15:04:05"))
 
-	// 使用范围查询
+	// 直接使用原始查询语句
 	result, _, err := client.QueryRange(ctx, metric.Query, v1.Range{
 		Start: startTime,
 		End:   endTime,
@@ -178,7 +175,7 @@ PromQL: %s
 	})
 
 	if err != nil {
-		log.Printf("执行查询失败 [%s]: %v", rangeQuery, err)
+		log.Printf("执行查询失败 [%s]: %v", metric.Query, err)
 		return false, err
 	}
 
@@ -191,27 +188,32 @@ PromQL: %s
 
 		log.Printf("指标 [%s] 返回 %d 个时间序列", metric.Name, len(v))
 
+		maxValue := float64(0)
 		// 遍历每个时间序列
 		for _, series := range v {
-			// 遍历每个采样点
+			// 遍历每个采样点，找出最大值
 			for _, sample := range series.Values {
 				value := float64(sample.Value)
-				isNormal := checkThreshold(value, metric.Threshold, metric.ThresholdType)
-				log.Printf("指标 [%s] 时间: %v, 值: %v, 阈值: %v, 阈值类型: %s, 状态: %v",
+				if value > maxValue {
+					maxValue = value
+				}
+				log.Printf("指标 [%s] 时间: %v, 值: %v",
 					metric.Name,
 					sample.Timestamp.Time().Format("15:04:05"),
-					value,
-					metric.Threshold,
-					metric.ThresholdType,
-					map[bool]string{true: "正常", false: "异常"}[isNormal])
-
-				// 如果任何一个点异常，就认为这一天是异常的
-				if !isNormal {
-					return false, nil
-				}
+					value)
 			}
 		}
-		return true, nil
+
+		// 使用最大值进行阈值判断
+		isNormal := checkThreshold(maxValue, metric.Threshold, metric.ThresholdType)
+		log.Printf("指标 [%s] 最大值: %v, 阈值: %v, 阈值类型: %s, 状态: %v",
+			metric.Name,
+			maxValue,
+			metric.Threshold,
+			metric.ThresholdType,
+			map[bool]string{true: "正常", false: "异常"}[isNormal])
+
+		return isNormal, nil
 
 	default:
 		log.Printf("指标 [%s] 返回了意外的结果类型: %T", metric.Name, result)
