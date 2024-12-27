@@ -94,7 +94,7 @@ metric_types:
         description: "持久化存储使用率"
         query: >-
           100 * (1 - kubelet_volume_stats_available_bytes / kubelet_volume_stats_capacity_bytes)
-        threshold: 90
+        threshold: 88
         threshold_type: "greater"
         unit: "%"
         labels:
