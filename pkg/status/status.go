@@ -35,6 +35,7 @@ type MetricConfig struct {
 
 type StatusSummary struct {
 	Normal       int
+	Warning      int // 新增警告状态计数
 	Abnormal     int
 	TotalMetrics int            // 总指标数
 	TypeCounts   map[string]int // 每种类型的指标数量
@@ -42,7 +43,7 @@ type StatusSummary struct {
 
 type MetricStatus struct {
 	Name          string
-	DailyStatus   map[string]bool // key是日期，value是状态(true表示正常)
+	DailyStatus   map[string]string // key是日期，value是状态("normal"/"warning"/"abnormal")
 	Threshold     float64
 	Unit          string
 	ThresholdType string
@@ -98,7 +99,7 @@ func CollectMetricStatus(client metrics.PrometheusAPI, config *config.Config) (*
 
 			metricStatus := MetricStatus{
 				Name:          metric.Name,
-				DailyStatus:   make(map[string]bool),
+				DailyStatus:   make(map[string]string),
 				Threshold:     metric.Threshold,
 				Unit:          metric.Unit,
 				ThresholdType: metric.ThresholdType,
@@ -109,14 +110,18 @@ func CollectMetricStatus(client metrics.PrometheusAPI, config *config.Config) (*
 				status, err := queryMetricStatus(client, metric, date)
 				if err != nil {
 					log.Printf("查询指标 [%s] 在 %s 的状态失败: %v", metric.Name, date, err)
-					metricStatus.DailyStatus[date] = false
+					metricStatus.DailyStatus[date] = "abnormal"
 					data.Summary.Abnormal++
 				} else {
 					metricStatus.DailyStatus[date] = status
-					if status {
+					switch status {
+					case "normal":
 						log.Printf("指标 [%s] 在 %s 状态正常", metric.Name, date)
 						data.Summary.Normal++
-					} else {
+					case "warning":
+						log.Printf("指标 [%s] 在 %s 状态警告", metric.Name, date)
+						data.Summary.Warning++
+					case "abnormal":
 						log.Printf("指标 [%s] 在 %s 状态异常", metric.Name, date)
 						data.Summary.Abnormal++
 					}
@@ -127,8 +132,8 @@ func CollectMetricStatus(client metrics.PrometheusAPI, config *config.Config) (*
 		}
 	}
 
-	log.Printf("状态数据收集完成. 总指标数: %d, 正常: %d, 异常: %d",
-		data.Summary.TotalMetrics, data.Summary.Normal, data.Summary.Abnormal)
+	log.Printf("状态数据收集完成. 总指标数: %d, 正常: %d, 警告: %d, 异常: %d",
+		data.Summary.TotalMetrics, data.Summary.Normal, data.Summary.Warning, data.Summary.Abnormal)
 
 	// 打印每种类型的指标数量
 	for typeName, count := range data.Summary.TypeCounts {
@@ -138,12 +143,12 @@ func CollectMetricStatus(client metrics.PrometheusAPI, config *config.Config) (*
 	return data, nil
 }
 
-func queryMetricStatus(client metrics.PrometheusAPI, metric config.MetricConfig, date string) (bool, error) {
+func queryMetricStatus(client metrics.PrometheusAPI, metric config.MetricConfig, date string) (string, error) {
 	ctx := context.Background()
 
 	dateTime, err := time.Parse("01-02", date)
 	if err != nil {
-		return false, err
+		return "abnormal", err
 	}
 
 	// 设置查询时间范围为那一天的0点到23:59:59
@@ -176,14 +181,14 @@ PromQL: %s
 
 	if err != nil {
 		log.Printf("执行查询失败 [%s]: %v", metric.Query, err)
-		return false, err
+		return "abnormal", err
 	}
 
 	switch v := result.(type) {
 	case model.Matrix:
 		if len(v) == 0 {
 			log.Printf("指标 [%s] 查询结果为空", metric.Name)
-			return false, nil
+			return "abnormal", nil
 		}
 
 		log.Printf("指标 [%s] 返回 %d 个时间序列", metric.Name, len(v))
@@ -205,55 +210,85 @@ PromQL: %s
 		}
 
 		// 使用最大值进行阈值判断
-		isNormal := checkThreshold(maxValue, metric.Threshold, metric.ThresholdType)
-		log.Printf("指标 [%s] 最大值: %v, 阈值: %v, 阈值类型: %s, 状态: %v",
+		status := checkThreshold(maxValue, metric.Threshold, metric.ThresholdType)
+		log.Printf("指标 [%s] 最大值: %v, 阈值: %v, 阈值类型: %s, 状态: %s",
 			metric.Name,
 			maxValue,
 			metric.Threshold,
 			metric.ThresholdType,
-			map[bool]string{true: "正常", false: "异常"}[isNormal])
+			status)
 
-		return isNormal, nil
+		return status, nil
 
 	default:
 		log.Printf("指标 [%s] 返回了意外的结果类型: %T", metric.Name, result)
-		return false, nil
+		return "abnormal", nil
 	}
 }
 
 // 根据阈值类型判断状态
-func checkThreshold(value, threshold float64, thresholdType string) bool {
+func checkThreshold(value, threshold float64, thresholdType string) string {
 	if thresholdType == "" {
 		thresholdType = "greater" // 默认值
 	}
+
+	// 警告阈值为正常阈值的90%
+	warningFactor := 0.9
 
 	switch thresholdType {
 	case "greater":
 		// 当值大于阈值时告警
 		// 例如：CPU使用率 > 80% 告警
-		return value <= threshold
+		if value > threshold {
+			return "abnormal"
+		} else if value > threshold*warningFactor {
+			return "warning"
+		}
+		return "normal"
 	case "greater_equal":
 		// 当值大于等于阈值时告警
-		// 例如：内存使用率 >= 85% 告警
-		return value < threshold
+		if value >= threshold {
+			return "abnormal"
+		} else if value >= threshold*warningFactor {
+			return "warning"
+		}
+		return "normal"
 	case "less":
 		// 当值小于阈值时告警
 		// 例如：可用节点数 < 3 告警
-		return value >= threshold
+		if value < threshold {
+			return "abnormal"
+		} else if value < threshold/warningFactor {
+			return "warning"
+		}
+		return "normal"
 	case "less_equal":
 		// 当值小于等于阈值时告警
-		// 例如：健康检查得分 <= 60 告警
-		return value > threshold
+		if value <= threshold {
+			return "abnormal"
+		} else if value <= threshold/warningFactor {
+			return "warning"
+		}
+		return "normal"
 	case "equal":
 		// 值必须等于阈值才正常
-		// 例如：服务状态必须为 1（运行中）
-		return value == threshold
+		if value == threshold {
+			return "normal"
+		}
+		return "abnormal"
 	case "not_equal":
 		// 值不等于阈值才正常
-		// 例如：错误状态不等于 0 告警
-		return value != threshold
+		if value != threshold {
+			return "normal"
+		}
+		return "abnormal"
 	default:
 		// 默认情况：大于阈值告警
-		return value <= threshold
+		if value > threshold {
+			return "abnormal"
+		} else if value > threshold*warningFactor {
+			return "warning"
+		}
+		return "normal"
 	}
 }

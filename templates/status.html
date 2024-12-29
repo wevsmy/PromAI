@@ -137,6 +137,11 @@
             color: var(--error-color);
         }
 
+        .status-warning .check-icon {
+            background: rgba(255, 173, 20, 0.1);
+            color: var(--warning-color);
+        }
+
         .date-header {
             font-size: 13px;
             text-align: center !important;
@@ -232,6 +237,10 @@
                 <h3>异常服务</h3>
                 <div class="number">{{.Summary.Abnormal}}</div>
             </div>
+            <div class="summary-card warning">
+                <h3>警告服务</h3>
+                <div class="number">{{.Summary.Warning}}</div>
+            </div>
         </div>
 
         <div class="type-summary">
@@ -279,10 +288,12 @@
                             </div>
                         </td>
                         {{range $date := $.Dates}}
-                        <td class="{{if index $metric.DailyStatus $date}}status-normal{{else}}status-abnormal{{end}}">
+                        <td class="{{if eq (index $metric.DailyStatus $date) "normal"}}status-normal{{else if eq (index $metric.DailyStatus $date) "warning"}}status-warning{{else}}status-abnormal{{end}}">
                             <span class="check-icon">
-                                {{if index $metric.DailyStatus $date}}
+                                {{if eq (index $metric.DailyStatus $date) "normal"}}
                                 ✓
+                                {{else if eq (index $metric.DailyStatus $date) "warning"}}
+                                ⚠
                                 {{else}}
                                 ✗
                                 {{end}}
