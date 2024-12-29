@@ -166,7 +166,6 @@ go build -o PromAI main.go
 ## 贡献者
 
 <!-- readme: collaborators,contributors -start -->
-
 <table>
 <tr>
     <td align="center">
