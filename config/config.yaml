@@ -1,4 +1,7 @@
 prometheus_url: "http://prometheus.monitoring.svc.cluster.local:9090"
+
+project_name: "测试项目"
+
 metric_types:
   - type: "基础资源使用情况"
     metrics:

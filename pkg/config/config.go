@@ -3,6 +3,7 @@ package config
 type Config struct {
 	PrometheusURL string       `yaml:"prometheus_url"`
 	MetricTypes   []MetricType `yaml:"metric_types"`
+	ProjectName   string       `yaml:"project_name"`
 }
 
 type MetricType struct {
