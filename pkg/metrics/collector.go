@@ -41,7 +41,7 @@ func (c *Collector) CollectMetrics() (*report.ReportData, error) {
 		Timestamp:    time.Now(),
 		MetricGroups: make(map[string]*report.MetricGroup),
 		ChartData:    make(map[string]template.JS),
-		ProjectName:  c.config.ProjectName,
+		Project:  c.config.ProjectName,
 	}
 
 	for _, metricType := range c.config.MetricTypes {
