@@ -47,6 +47,7 @@ type ReportData struct {
 	Timestamp    time.Time
 	MetricGroups map[string]*MetricGroup
 	ChartData    map[string]template.JS
+	Project      string
 }
 
 func GetStatusText(status string) string {
@@ -187,6 +188,7 @@ func GenerateReport(data ReportData) (string, error) {
 	}
 
 	// log.Println("Report generated successfully:", filename)
+	log.Printf("项目[%s]报告生成成功: %s", data.Project, filename)
 
 	return filename, nil // 添加返回语句
 }
