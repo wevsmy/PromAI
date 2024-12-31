@@ -193,6 +193,8 @@ go build -o PromAI main.go
 </table>
 <!-- readme: collaborators,contributors -end -->
 
+<!--ACTION_START_FLAG:github-followers-->
+<!--ACTION_END_FLAG:github-followers-->
 ## 许可证
 
 该项目采用 MIT 许可证，详细信息请查看 LICENSE 文件。
