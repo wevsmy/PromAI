@@ -1,39 +1,27 @@
 package prometheus
 
 import (
-	"context"
-	"time"
+	"fmt"
 
 	"github.com/prometheus/client_golang/api"
 	v1 "github.com/prometheus/client_golang/api/prometheus/v1"
-	"github.com/prometheus/common/model"
 )
 
+// Client 封装 Prometheus 客户端
 type Client struct {
-	api v1.API
+	API v1.API
 }
 
+// NewClient 创建新的 Prometheus 客户端
 func NewClient(url string) (*Client, error) {
 	client, err := api.NewClient(api.Config{
 		Address: url,
 	})
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("creating prometheus client: %w", err)
 	}
 
 	return &Client{
-		api: v1.NewAPI(client),
+		API: v1.NewAPI(client),
 	}, nil
-}
-
-func (c *Client) Query(query string) (model.Value, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
-
-	result, _, err := c.api.Query(ctx, query, time.Now())
-	if err != nil {
-		return nil, err
-	}
-
-	return result, nil
 }

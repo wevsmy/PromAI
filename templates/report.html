@@ -1,7 +1,8 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>集群系统监控巡检报告</title>
+    <!--<title>集群系统监控巡检报告</title>-->
+    <title>{{.Project}}</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         body {
@@ -153,7 +154,8 @@
 </head>
 <body>
     <div class="container">
-        <h1>集群系统监控巡检报告</h1>
+        <!--<h1>集群系统监控巡检报告</h1>-->
+        <h1 style="text-align: center">{{.Project}}</h1>
         <p>生成时间: {{.Timestamp.Format "2006-01-02 15:04:05"}}</p>
 
         <!-- 概览卡片 -->
@@ -205,7 +207,10 @@
         <div class="section">
             <h2>{{$type}} 监控指标</h2>
             {{range $metricName, $metrics := $group.MetricsByName}}
-            <h3>{{$metricName}}</h3>
+            <h3><li>{{$metricName}}</li></h3>
+	    {{if eq (len $metrics) 0 }}
+             <p>未查询到数据</p>
+            {{end}}
             {{if gt (len $metrics) 0}}
             <table>
                 <tr>
@@ -249,70 +254,134 @@
         {{end}}
     </div>
 
-    <script>
-        // 生成随机颜色
-        function getRandomColor() {
-            const hue = Math.random() * 360;
-            return {
-                background: `hsla(${hue}, 70%, 95%, 1)`,
-                border: `hsla(${hue}, 70%, 70%, 1)`
-            };
+<script>
+    // 生成随机颜色
+    function getRandomColor() {
+        const hue = Math.random() * 360;
+        return {
+            background: `hsla(${hue}, 70%, 95%, 1)`,
+            border: `hsla(${hue}, 70%, 70%, 1)`
+        };
+    }
+
+    // 设置卡片样式
+    document.addEventListener('DOMContentLoaded', function() {
+        const cards = document.querySelectorAll('.card');
+        const cardCount = cards.length;
+        
+        // 根据卡片数量优化布局
+        const container = document.querySelector('.summary-cards');
+        if (cardCount <= 2) {
+            container.style.gridTemplateColumns = `repeat(${cardCount}, 1fr)`;
+        } else if (cardCount <= 4) {
+            container.style.gridTemplateColumns = 'repeat(2, 1fr)';
         }
 
-        // 设置卡片样式
-        document.addEventListener('DOMContentLoaded', function() {
-            const cards = document.querySelectorAll('.card');
-            const cardCount = cards.length;
-            
-            // 根据卡片数量优化布局
-            const container = document.querySelector('.summary-cards');
-            if (cardCount <= 2) {
-                container.style.gridTemplateColumns = `repeat(${cardCount}, 1fr)`;
-            } else if (cardCount <= 4) {
-                container.style.gridTemplateColumns = 'repeat(2, 1fr)';
-            }
-
-            // 为每个卡片设置随机颜色
-            cards.forEach(card => {
-                const colors = getRandomColor();
-                card.style.backgroundColor = colors.background;
-                card.style.borderLeft = `4px solid ${colors.border}`;
-            });
+        // 为每个卡片设置随机颜色
+        cards.forEach(card => {
+            const colors = getRandomColor();
+            card.style.backgroundColor = colors.background;
+            card.style.borderLeft = `4px solid ${colors.border}`;
         });
+    });
 
-        // 初始化图表
-        const ctx = document.getElementById('resourceChart').getContext('2d');
-        new Chart(ctx, {
-            type: 'bar',
-            data: {
-                labels: [],
-                datasets: []
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: {
-                        position: 'top',
-                    },
-                    title: {
-                        display: true,
-                        text: '资源使用情况'
+    // 初始化图表
+    const ctx = document.getElementById('resourceChart').getContext('2d');
+    const data = {{.MetricGroups}}
+    const labels = []; 
+    const datasets = [];
+
+    // 添加通用的数据获取函数
+    function getMetricValues(metricName, filterFn = null) {
+        const values = [];
+        const labels = new Set(); // 使用 Set 存储唯一的标签
+        
+        for (const [type, group] of Object.entries(data)) {
+            if (group.MetricsByName && group.MetricsByName[metricName]) {
+                for (const metric of group.MetricsByName[metricName]) {
+                    if (filterFn && !filterFn(metric)) continue;
+                    
+                    // 获取实例标签
+                    const instanceLabel = metric.Labels.find(label => 
+                        label.Name === "instance" || label.Name === "node"
+                    );
+                    if (instanceLabel) {
+                        labels.add(instanceLabel.Value.split(':')[0]);
+                        values.push(parseFloat(metric.Value));
                     }
+                }
+            }
+        }
+        return { values, labels: Array.from(labels) };
+    }
+
+    // 获取各项指标数据
+    const cpuData = getMetricValues('CPU使用率');
+    const memoryData = getMetricValues('内存使用率');
+    const diskData = getMetricValues('磁盘使用率', (metric) => {
+        return metric.Labels.some(label => 
+            label.Value === "rootfs" || label.Value === "/"
+        );
+    });
+
+    // 使用第一个指标的标签作为图表标签
+    const chartLabels = cpuData.labels;
+    // 添加颜色判断函数
+    function getColorByValue(value) {
+        if (value >= 90) return '#dc3545';  // 红色告警 (>=90%)
+        if (value >= 80) return '#ffc107';  // 黄色告警 (80-90%)
+        return '#4CAF50';                   // 绿色正常 (<80%)
+    }
+    // 创建数据集
+    const chartDatasets = [
+        {
+            label: 'CPU使用率',
+            data: cpuData.values,
+            backgroundColor: cpuData.values.map(value => getColorByValue(value)),
+        },
+        {
+            label: '内存使用率',
+            data: memoryData.values,
+            backgroundColor: memoryData.values.map(value => getColorByValue(value)),
+        },
+        {
+            label: '磁盘使用率',
+            data: diskData.values,
+            backgroundColor: diskData.values.map(value => getColorByValue(value)),
+        }
+    ];
+
+    new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: chartLabels,
+            datasets: chartDatasets, 
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'top',
                 },
-                scales: {
-                    y: {
-                        beginAtZero: true,
-                        max: 100,
-                        ticks: {
-                            callback: function(value) {
-                                return value + '%';
-                            }
+                title: {
+                    display: true,
+                    text: '资源使用情况'
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    max: 100,
+                    ticks: {
+                        callback: function(value) {
+                            return value + '%';
                         }
                     }
                 }
             }
-        });
-    </script>
+        }
+    });
+</script>
 </body>
 </html>

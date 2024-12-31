@@ -1,4 +1,15 @@
-prometheus_url: "http://prometheus-kube-prometheus-prometheus.monitoring.svc.cluster.local:9090"
+prometheus_url: "http://prometheus.monitoring.svc.cluster.local:9090"
+
+project_name: "测试项目"
+
+# 定时任务：每天9点和18执行
+cron_schedule: "0 9,18 * * *"
+
+# 报告清理
+report_cleanup:
+  enabled: true
+  max_age: 7    # 保留最近7天的报告
+  cron_schedule: "0 0 * * *" # 如果为空，则执行执行上面定时任务，即生成报告时清理
 
 metric_types:
   - type: "基础资源使用情况"
@@ -6,9 +17,8 @@ metric_types:
       - name: "CPU使用率"
         description: "节点CPU使用率统计"
         query: "100 - (avg by(instance) (irate(node_cpu_seconds_total{mode='idle'}[5m])) * 100)"
-        trend_query: "100 - (avg by(instance) (irate(node_cpu_seconds_total{mode='idle'}[5m])) * 100)[6h:5m]"
         threshold: 80
-
+        threshold_type: "greater"
         unit: "%"
         labels:
           instance: "节点"
@@ -16,8 +26,8 @@ metric_types:
       - name: "内存使用率"
         description: "节点内存使用率统计"
         query: "100 - ((node_memory_MemAvailable_bytes * 100) / node_memory_MemTotal_bytes)"
-        trend_query: "100 - ((node_memory_MemAvailable_bytes * 100) / node_memory_MemTotal_bytes)[6h:5m]"
         threshold: 85
+        threshold_type: "greater"
         unit: "%"
         labels:
           instance: "节点"
@@ -30,12 +40,25 @@ metric_types:
           + on(instance) group_left(node_uname_info) node_uname_info) 
           * on(instance) group_left(nodename) node_uname_info
         threshold: 80
+        threshold_type: "greater"
         unit: "%"
         labels:
-          device: "设备"
-          instance: "IP"
+          instance: "节点"
           mountpoint: "挂载点"
+          device: "磁盘"
           nodename: "节点名称"
+
+
+      - name: "固定机器内存使用率"
+        description: "固定机器内存使用率统计"
+        query: >-
+          100 - ((node_memory_MemAvailable_bytes{instance="172.16.5.132:9100"} * 100) / node_memory_MemTotal_bytes{instance="172.16.5.132:9100"})
+        threshold: 16.84
+        threshold_type: "greater"
+        unit: "%"
+        labels:
+          instance: "节点"
+
 
   - type: "PaaS平台巡检"
     metrics:
@@ -47,7 +70,11 @@ metric_types:
         unit: ""
         labels:
           component: "服务名称"
-          describe: "服务描述"
+          namespace: "命名空间"
+          # describe: "服务描述"
+          hostname: "主机名称"
+          owner: "负责人"
+          instance: "节点"
 
   - type: "kubernetes集群监控状态"
     metrics:
@@ -96,47 +123,9 @@ metric_types:
         description: "持久化存储使用率"
         query: >-
           100 * (1 - kubelet_volume_stats_available_bytes / kubelet_volume_stats_capacity_bytes)
-        threshold: 80
+        threshold: 90
+        threshold_type: "greater"
         unit: "%"
         labels:
           namespace: "命名空间"
           persistentvolumeclaim: "PVC名称"
-
-  # - type: "application"
-  #   metrics:
-  #     - name: "服务可用性"
-  #       description: "关键服务健康检查"
-  #       query: "up{job=~'.*service.*'}"
-  #       threshold: 1
-  #       unit: ""
-  #       labels:
-  #         job: "服务名称"
-  #         instance: "实例"
-
-  #     - name: "HTTP请求错误率"
-  #       description: "服务HTTP 5xx错误率"
-  #       query: >-
-  #         sum(rate(http_requests_total{status=~"5.."}[5m])) by (service) 
-  #         / sum(rate(http_requests_total[5m])) by (service) * 100
-  #       threshold: 5
-  #       unit: "%"
-  #       labels:
-  #         service: "服务"
-
-  #     - name: "服务响应延迟"
-  #       description: "服务P95响应时间"
-  #       query: "histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket[5m])) by (le, service))"
-  #       threshold: 1
-  #       unit: "s"
-  #       labels:
-  #         service: "服务"
-
-  # - type: "network"
-  #   metrics:
-  #     - name: "TCP连接状态"
-  #       description: "TCP连接状态统计"
-  #       query: "node_netstat_Tcp_CurrEstab"
-  #       threshold: 10000
-  #       unit: ""
-  #       labels:
-  #         instance: "节点"

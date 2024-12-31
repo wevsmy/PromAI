@@ -11,7 +11,10 @@ LABEL version="1.0" \
       maintainer="Kubehan"
 WORKDIR /app
 COPY --from=builder /build/PromAI /app/
-COPY config outputs reports templates /app/
-EXPOSE 8080
+COPY --from=builder /build/config /app/config/
+COPY --from=builder /build/outputs /app/outputs/
+COPY --from=builder /build/reports /app/reports/
+COPY --from=builder /build/templates /app/templates/
+EXPOSE 8091
 # 运行应用程序
-CMD ["./PromAI", "-port", "8080"]
+CMD ["./PromAI", "-port", "8091"]
