@@ -15,6 +15,7 @@ import (
 	"PromAI/pkg/report"
 	"PromAI/pkg/status"
 
+	"github.com/robfig/cron/v3"
 	"gopkg.in/yaml.v2"
 )
 
@@ -65,6 +66,61 @@ func main() {
 	}
 
 	collector := metrics.NewCollector(client.API, config)
+
+	// 设置定时任务
+	if config.CronSchedule != "" {
+		c := cron.New()
+		_, err := c.AddFunc(config.CronSchedule, func() {
+			data, err := collector.CollectMetrics()
+			if err != nil {
+				log.Printf("定时任务收集指标失败: %v", err)
+				return
+			}
+
+			reportFilePath, err := report.GenerateReport(*data)
+			if err != nil {
+				log.Printf("定时任务生成报告失败: %v", err)
+				return
+			}
+			log.Printf("定时任务成功生成报告: %s", reportFilePath)
+		})
+
+		if err != nil {
+			log.Printf("设置定时任务失败: %v", err)
+		} else {
+			c.Start()
+			log.Printf("已启动定时任务，执行计划: %s", config.CronSchedule)
+		}
+	} else {
+		log.Printf("未配置定时任务，请手动触发生成报告")
+	}
+	if config.ReportCleanup.Enabled {
+		// 确定使用哪个计划
+		cleanupSchedule := config.ReportCleanup.CronSchedule
+		if cleanupSchedule == "" {
+			cleanupSchedule = config.CronSchedule
+		}
+
+		if cleanupSchedule != "" {
+			c := cron.New()
+			_, err := c.AddFunc(cleanupSchedule, func() {
+				if err := report.CleanupReports(config.ReportCleanup.MaxAge); err != nil {
+					log.Printf("报告清理失败: %v", err)
+					return
+				}
+				log.Printf("报告清理成功")
+			})
+
+			if err != nil {
+				log.Printf("设置清理定时任务失败: %v", err)
+			} else {
+				c.Start()
+				log.Printf("已启动清理定时任务，执行计划: %s", cleanupSchedule)
+			}
+		} else {
+			log.Printf("未配置任何定时任务计划，请手动清理报告")
+		}
+	}
 
 	// 设置路由处理器
 	setupRoutes(collector, config)
