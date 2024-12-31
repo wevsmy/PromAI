@@ -1,16 +1,4 @@
 prometheus_url: "http://prometheus.monitoring.svc.cluster.local:9090"
-
-project_name: "测试项目"
-
-# 定时任务：每天9点和18执行
-cron_schedule: "0 9,18 * * *"
-
-# 报告清理
-report_cleanup:
-  enabled: true
-  max_age: 7    # 保留最近7天的报告
-  cron_schedule: "0 0 * * *" # 如果为空，则执行执行上面定时任务，即生成报告时清理
-
 metric_types:
   - type: "基础资源使用情况"
     metrics:
