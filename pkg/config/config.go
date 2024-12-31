@@ -4,6 +4,12 @@ type Config struct {
 	PrometheusURL string       `yaml:"prometheus_url"`
 	MetricTypes   []MetricType `yaml:"metric_types"`
 	ProjectName   string       `yaml:"project_name"`
+	CronSchedule  string       `yaml:"cron_schedule"`
+	ReportCleanup struct {
+        Enabled bool `yaml:"enabled"`
+        MaxAge  int  `yaml:"max_age"`
+		CronSchedule string `yaml:"cron_schedule"`
+    } `yaml:"report_cleanup"`
 }
 
 type MetricType struct {
