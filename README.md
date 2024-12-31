@@ -11,8 +11,7 @@
 http://localhost:8091/getreport
 
 [报告样式](reports/inspection_report_20241214_131709.html)
-![report](images/资源概览.png)
-<!-- ![report](images/image.png) -->
+![report](images/image.png)
 ![report](images/image2.png)
 
 ## 服务健康看板
